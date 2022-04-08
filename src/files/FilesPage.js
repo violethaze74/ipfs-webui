@@ -122,9 +122,7 @@ const FilesPage = ({
     if (!files) return (<div/>)
 
     if (files.type === 'unknown') {
-      const path = files.path.startsWith('/pins')
-        ? files.path.slice(6)
-        : files.path
+      const path = files.path
 
       return (
         <div>
@@ -174,8 +172,6 @@ const FilesPage = ({
 
     if (filesPathInfo.isMfs) {
       parts.push(t('app:terms.files'))
-    } else if (filesPathInfo.isPins) {
-      parts.push(t('app:terms.pins'))
     }
 
     parts.push('IPFS')
