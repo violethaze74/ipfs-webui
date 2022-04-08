@@ -107,6 +107,7 @@
   "pinned": "Pinned",
   "pinnedRemotely": "Pinned remotely",
   "pinningRemotely": "Pinning remotely",
+  "pinningFailed": "Pinning failed",
   "blocks": "Blocks",
   "allBlocks": "All blocks",
   "allBlocksDescription": "Total size of blocks on your entire IPFS node; this includes everything in Files, plus all locally pinned items and any temporary cached data",

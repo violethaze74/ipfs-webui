@@ -62,6 +62,7 @@ const pinningBundle = {
     pinningServices: [],
     remotePins: [],
     pendingPins: [],
+    failedPins: [],
     notRemotePins: [],
     localPinsSize: 0,
     localNumberOfPins: 0,
@@ -158,6 +159,7 @@ const pinningBundle = {
   selectRemotePins: (state) => state.pinning.remotePins || [],
   selectNotRemotePins: (state) => state.pinning.notRemotePins || [],
   selectPendingPins: (state) => state.pinning.pendingPins || [],
+  selectFailedPins: (state) => state.pinning.failedPins || [],
 
   selectLocalPinsSize: (state) => state.pinning.localPinsSize,
   selectLocalNumberOfPins: (state) => state.pinning.localNumberOfPins,

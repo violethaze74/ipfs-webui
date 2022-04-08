@@ -18,7 +18,7 @@ import { NativeTypes } from 'react-dnd-html5-backend'
 import './PendingAnimation.css'
 
 const File = ({
-  name, type, size, cid, path, pinned, t, selected, focused, translucent, coloured, cantSelect, cantDrag, isMfs, isRemotePin, isPendingPin,
+  name, type, size, cid, path, pinned, t, selected, focused, translucent, coloured, cantSelect, cantDrag, isMfs, isRemotePin, isPendingPin, isFailedPin,
   onAddFiles, onMove, onSelect, onNavigate, onSetPinning, handleContextMenuClick
 }) => {
   const dotsWrapper = useRef()
@@ -138,7 +138,11 @@ const File = ({
             { isPendingPin && <div className='br-100 PendingAnimation' title={t('pinningRemotely')} style={{ width: '2rem', height: '2rem' }}>
               <GlyphPinCloud className='fill-aqua' />
             </div> }
-            { !pinned && !isRemotePin && !isPendingPin && <div className='br-100 hide-child' title={t('app:actions.setPinning')} style={{ width: '2rem', height: '2rem' }}>
+            { isFailedPin && <div className='br-100 o-70' title={t('pinningFailed')} style={{ width: '2rem', height: '2rem' }}>
+              {/* TODO: click to clear */}
+              <GlyphPinCloud className='fill-red' />
+            </div> }
+            { !pinned && !isRemotePin && !isPendingPin && !isFailedPin && <div className='br-100 hide-child' title={t('app:actions.setPinning')} style={{ width: '2rem', height: '2rem' }}>
               <GlyphPin className='fill-gray-muted child' />
             </div> }
           </button>

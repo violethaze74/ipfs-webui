@@ -22,7 +22,7 @@ import FileImportStatus from './file-import-status/FileImportStatus'
 
 const FilesPage = ({
   doFetchPinningServices, doFilesFetch, doPinsFetch, doFilesSizeGet, doFilesDownloadLink, doFilesWrite, doFilesAddPath, doUpdateHash,
-  doFilesUpdateSorting, doFilesNavigateTo, doFilesMove, doSetCliOptions, doFetchRemotePins, remotePins, pendingPins, doExploreUserProvidedPath,
+  doFilesUpdateSorting, doFilesNavigateTo, doFilesMove, doSetCliOptions, doFetchRemotePins, remotePins, pendingPins, failedPins, doExploreUserProvidedPath,
   ipfsProvider, ipfsConnected, doFilesMakeDir, doFilesShareLink, doFilesDelete, doSetPinning, onRemotePinClick,
   files, filesPathInfo, pinningServices, toursEnabled, handleJoyrideCallback, isCliTutorModeEnabled, cliOptions, t
 }) => {
@@ -118,7 +118,7 @@ const FilesPage = ({
     })
   }
 
-  const MainView = ({ t, files, remotePins, pendingPins, doExploreUserProvidedPath }) => {
+  const MainView = ({ t, files, remotePins, pendingPins, failedPins, doExploreUserProvidedPath }) => {
     if (!files) return (<div/>)
 
     if (files.type === 'unknown') {
@@ -148,6 +148,7 @@ const FilesPage = ({
         files={files.content}
         remotePins={remotePins}
         pendingPins={pendingPins}
+        failedPins={failedPins}
         upperDir={files.upper}
         downloadProgress={downloadProgress}
         onShare={(files) => showModal(SHARE, files)}
@@ -219,7 +220,7 @@ const FilesPage = ({
         onCliTutorMode={() => showModal(CLI_TUTOR_MODE)}
         handleContextMenu={(...args) => handleContextMenu(...args, true)} />
 
-      <MainView t={t} files={files} remotePins={remotePins} pendingPins={pendingPins} doExploreUserProvidedPath={doExploreUserProvidedPath}/>
+      <MainView t={t} files={files} remotePins={remotePins} pendingPins={pendingPins} failedPins={failedPins} doExploreUserProvidedPath={doExploreUserProvidedPath}/>
 
       <InfoBoxes isRoot={filesPathInfo.isMfs && filesPathInfo.isRoot}
         isCompanion={ipfsProvider === 'window.ipfs'}
@@ -258,6 +259,7 @@ export default connect(
   'selectFiles',
   'selectRemotePins',
   'selectPendingPins',
+  'selectFailedPins',
   'selectFilesPathInfo',
   'doUpdateHash',
   'doPinsFetch',
