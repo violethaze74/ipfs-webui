@@ -61,17 +61,20 @@ const pinningBundle = {
   reducer: (state = {
     pinningServices: [],
     remotePins: [],
+    pendingPins: [],
     notRemotePins: [],
     localPinsSize: 0,
     localNumberOfPins: 0,
     arePinningServicesSupported: false
   }, action) => {
     if (action.type === 'UPDATE_REMOTE_PINS') {
-      const { adds = [], removals = [] } = action.payload
+      const { adds = [], removals = [], pending = [] } = action.payload
       const uniq = (arr) => [...new Set(arr)]
       const remotePins = uniq([...state.remotePins, ...adds].filter(p => !removals.some(r => r === p)))
       const notRemotePins = uniq([...state.notRemotePins, ...removals].filter(p => !adds.some(a => a === p)))
-      return { ...state, remotePins, notRemotePins }
+      const pendingPins = uniq([...state.pendingPins, ...pending].filter(p => !adds.some(a => a === p) && !removals.some(a => a === p)))
+
+      return { ...state, remotePins, notRemotePins, pendingPins }
     }
     if (action.type === 'SET_LOCAL_PINS_STATS') {
       const { localPinsSize, localNumberOfPins } = action.payload
@@ -149,11 +152,12 @@ const pinningBundle = {
         console.error('unexpected error during doFetchRemotePins', e)
       }
     }))
-    dispatch({ type: 'UPDATE_REMOTE_PINS', payload: { adds, removals } })
+    dispatch({ type: 'UPDATE_REMOTE_PINS', payload: { adds, removals, pending: [] } })
   },
 
   selectRemotePins: (state) => state.pinning.remotePins || [],
   selectNotRemotePins: (state) => state.pinning.notRemotePins || [],
+  selectPendingPins: (state) => state.pinning.pendingPins || [],
 
   selectLocalPinsSize: (state) => state.pinning.localPinsSize,
   selectLocalNumberOfPins: (state) => state.pinning.localNumberOfPins,
@@ -236,6 +240,7 @@ const pinningBundle = {
     }
 
     const adds = []
+    const pending = []
     const removals = []
 
     store.selectPinningServices().forEach(async service => {
@@ -246,10 +251,7 @@ const pinningBundle = {
       const id = `${service.name}:${cid}`
       try {
         if (shouldPin) {
-          adds.push(id)
-          /* TODO: remove background:true below and add pin job to persisted queue.
-           * We want track ongoing pinning across restarts of webui/ipfs-desktop
-           * See: https://github.com/ipfs/ipfs-webui/issues/1752 */
+          pending.push(id)
           await ipfs.pin.remote.add(cid, { service: service.name, name, background: true })
         } else {
           removals.push(id)
@@ -263,7 +265,7 @@ const pinningBundle = {
       }
     })
 
-    dispatch({ type: 'UPDATE_REMOTE_PINS', payload: { adds, removals } })
+    dispatch({ type: 'UPDATE_REMOTE_PINS', payload: { adds, removals, pending } })
 
     await store.doPinsFetch()
   },

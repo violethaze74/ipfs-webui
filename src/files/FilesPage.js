@@ -22,7 +22,7 @@ import FileImportStatus from './file-import-status/FileImportStatus'
 
 const FilesPage = ({
   doFetchPinningServices, doFilesFetch, doPinsFetch, doFilesSizeGet, doFilesDownloadLink, doFilesWrite, doFilesAddPath, doUpdateHash,
-  doFilesUpdateSorting, doFilesNavigateTo, doFilesMove, doSetCliOptions, doFetchRemotePins, remotePins, doExploreUserProvidedPath,
+  doFilesUpdateSorting, doFilesNavigateTo, doFilesMove, doSetCliOptions, doFetchRemotePins, remotePins, pendingPins, doExploreUserProvidedPath,
   ipfsProvider, ipfsConnected, doFilesMakeDir, doFilesShareLink, doFilesDelete, doSetPinning, onRemotePinClick,
   files, filesPathInfo, pinningServices, toursEnabled, handleJoyrideCallback, isCliTutorModeEnabled, cliOptions, t
 }) => {
@@ -118,7 +118,7 @@ const FilesPage = ({
     })
   }
 
-  const MainView = ({ t, files, remotePins, doExploreUserProvidedPath }) => {
+  const MainView = ({ t, files, remotePins, pendingPins, doExploreUserProvidedPath }) => {
     if (!files) return (<div/>)
 
     if (files.type === 'unknown') {
@@ -147,6 +147,7 @@ const FilesPage = ({
         updateSorting={doFilesUpdateSorting}
         files={files.content}
         remotePins={remotePins}
+        pendingPins={pendingPins}
         upperDir={files.upper}
         downloadProgress={downloadProgress}
         onShare={(files) => showModal(SHARE, files)}
@@ -218,7 +219,7 @@ const FilesPage = ({
         onCliTutorMode={() => showModal(CLI_TUTOR_MODE)}
         handleContextMenu={(...args) => handleContextMenu(...args, true)} />
 
-      <MainView t={t} files={files} remotePins={remotePins} doExploreUserProvidedPath={doExploreUserProvidedPath}/>
+      <MainView t={t} files={files} remotePins={remotePins} pendingPins={pendingPins} doExploreUserProvidedPath={doExploreUserProvidedPath}/>
 
       <InfoBoxes isRoot={filesPathInfo.isMfs && filesPathInfo.isRoot}
         isCompanion={ipfsProvider === 'window.ipfs'}
@@ -256,6 +257,7 @@ export default connect(
   'selectIpfsConnected',
   'selectFiles',
   'selectRemotePins',
+  'selectPendingPins',
   'selectFilesPathInfo',
   'doUpdateHash',
   'doPinsFetch',

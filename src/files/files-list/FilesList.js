@@ -22,23 +22,30 @@ const addFiles = async (filesPromise, onAddFiles) => {
   onAddFiles(normalizeFiles(files))
 }
 
-const mergeRemotePinsIntoFiles = (files, remotePins) => {
+const mergeRemotePinsIntoFiles = (files, remotePins, pendingPins) => {
   const remotePinsCids = remotePins.map(id => id.split(':').at(-1))
+  const pendingPinsCids = pendingPins.map(id => id.split(':').at(-1))
 
-  return files.map(f => remotePinsCids.includes(f.cid?.toString()) ? ({
-    ...f,
-    isRemotePin: true
-  }) : f)
+  return files.map(f => {
+    const isRemotePin = remotePinsCids.includes(f.cid?.toString())
+    const isPendingPin = pendingPinsCids.includes(f.cid?.toString())
+
+    return {
+      ...f,
+      isRemotePin,
+      isPendingPin
+    }
+  })
 }
 
 export const FilesList = ({
-  className, files, pins, pinningServices, remotePins, filesSorting, updateSorting, downloadProgress, filesIsFetching, filesPathInfo, showLoadingAnimation,
+  className, files, pins, pinningServices, remotePins, pendingPins, filesSorting, updateSorting, downloadProgress, filesIsFetching, filesPathInfo, showLoadingAnimation,
   onShare, onSetPinning, onInspect, onDownload, onRemove, onRename, onNavigate, onRemotePinClick, onAddFiles, onMove, doFetchRemotePins, handleContextMenuClick, t
 }) => {
   const [selected, setSelected] = useState([])
   const [focused, setFocused] = useState(null)
   const [firstVisibleRow, setFirstVisibleRow] = useState(null)
-  const [allFiles, setAllFiles] = useState(mergeRemotePinsIntoFiles(files, remotePins))
+  const [allFiles, setAllFiles] = useState(mergeRemotePinsIntoFiles(files, remotePins, pendingPins))
   const listRef = useRef()
   const filesRefs = useRef([])
   const refreshPinCache = true // manually clicking on Pin Status column skips cache and updates remote status
@@ -140,8 +147,8 @@ export const FilesList = ({
   [])
 
   useEffect(() => {
-    setAllFiles(mergeRemotePinsIntoFiles(files, remotePins))
-  }, [files, remotePins, filesSorting])
+    setAllFiles(mergeRemotePinsIntoFiles(files, remotePins, pendingPins))
+  }, [files, remotePins, filesSorting, pendingPins])
 
   useEffect(() => {
     const selectedFiles = selected.filter(name => files.find(el => el.name === name))
@@ -343,6 +350,7 @@ FilesList.propTypes = {
   className: PropTypes.string,
   files: PropTypes.array.isRequired,
   remotePins: PropTypes.array,
+  pendingPins: PropTypes.array,
   filesSorting: PropTypes.shape({
     by: PropTypes.string.isRequired,
     asc: PropTypes.bool.isRequired
@@ -369,7 +377,8 @@ FilesList.propTypes = {
 
 FileList.defaultProps = {
   className: '',
-  remotePins: []
+  remotePins: [],
+  pendingPins: []
 }
 
 export default connect(
