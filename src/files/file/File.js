@@ -129,7 +129,7 @@ const File = ({
 
         <div className='ph2 pv1 flex-none hide-child dn db-l tr mw3 w-20 transition-all'>
           <button className='ph2 db button-inside-focus' style={{ width: '2.5rem', height: '2rem' }} onClick={() => onSetPinning([{ cid, pinned }])}>
-            { pinned && !isRemotePin && <div className='br-100 o-70' title={t('pinned')} style={{ width: '2rem', height: '2rem' }}>
+            { pinned && !isRemotePin && !isPendingPin && !isFailedPin && <div className='br-100 o-70' title={t('pinned')} style={{ width: '2rem', height: '2rem' }}>
               <GlyphPin className='fill-aqua' />
             </div> }
             { isRemotePin && !isPendingPin && <div className='br-100 o-70' title={t('pinnedRemotely')} style={{ width: '2rem', height: '2rem' }}>
