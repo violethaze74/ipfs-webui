@@ -58,6 +58,10 @@ const uniqueCidBatches = (arrayOfCids, size) => {
 const pinningBundle = {
   name: 'pinning',
   persistActions: ['UPDATE_REMOTE_PINS'],
+  init: store => {
+    // TODO: start periodic checker here
+    console.log('hey')
+  },
   reducer: (state = {
     pinningServices: [],
     remotePins: [],
