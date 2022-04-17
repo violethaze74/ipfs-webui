@@ -67,7 +67,6 @@ const pinningBundle = {
         ...store.selectPendingPins(),
         ...store.selectFailedPins()
       ].map(serviceCid => ({ cid: serviceCid.split(':')[1] }))
-      console.info('Checking Pins', pins)
       store.doFetchRemotePins(pins, true)
     }, 30000)
   },
@@ -173,7 +172,6 @@ const pinningBundle = {
           try {
             const pins = lsWithBackoff({ service: service.name, cid: cidsToCheck.map(cid => new CID(cid)), status: ['queued', 'pinning', 'pinned', 'failed'] })
             for await (const pin of pins) {
-              console.log(pin)
               const pinCid = pin.cid.toString()
               notPins.delete(pinCid)
 
