@@ -63,15 +63,13 @@ const pinningBundle = {
   init: store => {
     // Starts periodic remote pins checker.
     setInterval(() => {
-      console.info('Checking pins')
-
       const pins = [
         ...store.selectPendingPins(),
         ...store.selectFailedPins()
       ].map(serviceCid => ({ cid: serviceCid.split(':')[1] }))
-
-      store.doFetchRemotePins(pins)
-    }, 1000)
+      console.info('Checking Pins', pins)
+      store.doFetchRemotePins(pins, true)
+    }, 30000)
   },
   reducer: (state = {
     pinningServices: [],
@@ -86,10 +84,11 @@ const pinningBundle = {
     if (action.type === 'UPDATE_REMOTE_PINS') {
       const { adds = [], removals = [], pending = [], failed = [] } = action.payload
       const uniq = (arr) => [...new Set(arr)]
-      const remotePins = uniq([...state.remotePins, ...adds].filter(p => !removals.some(r => r === p)))
-      const notRemotePins = uniq([...state.notRemotePins, ...removals].filter(p => !adds.some(a => a === p)))
-      const pendingPins = uniq([...state.pendingPins, ...pending].filter(p => !adds.some(a => a === p) && !removals.some(a => a === p)))
-      const failedPins = uniq([...state.failedPins, ...failed].filter(p => !adds.some(a => a === p) && !removals.some(a => a === p) && !pendingPins.some(a => a === p)))
+      const notIn = (...arrays) => p => arrays.every(array => !array.some(a => a === p))
+      const remotePins = uniq([...state.remotePins, ...adds].filter(notIn(removals, pending, failed)))
+      const notRemotePins = uniq([...state.notRemotePins, ...removals].filter(notIn(adds, pending, failed)))
+      const pendingPins = uniq([...state.pendingPins, ...pending].filter(notIn(adds, removals, failed)))
+      const failedPins = uniq([...state.failedPins, ...failed].filter(notIn(adds, removals, pending)))
 
       return { ...state, remotePins, notRemotePins, pendingPins, failedPins }
     }
@@ -139,11 +138,9 @@ const pinningBundle = {
       const backoffs = readSetting('remotesServicesBackoffs') || {}
       const { service } = params
 
-      console.log(service)
-
       const { lastTry, tryAfter } = backoffs[service] || { lastTry: 0, tryAfter: 30000 } // Start with 30s
       if (lastTry + tryAfter > new Date().getTime()) {
-        throw new Error('Still within backoff period.')
+        throw new Error('still within backoff period')
       }
 
       try {
@@ -154,7 +151,6 @@ const pinningBundle = {
             lastTry: new Date().getTime(),
             tryAfter: tryAfter * 3
           }
-
           writeSetting('remotesServicesBackoffs', backoffs)
         }
 
@@ -175,10 +171,9 @@ const pinningBundle = {
           if (!cidsToCheck.length) continue // skip if no new cids to check
           const notPins = new Set(cidsToCheck.map(cid => cid.toString()))
           try {
-            /* TODO: wrap pin.remote.*calls with progressive backoff when response Type == "error" and Message includes "429 Too Many Requests"
-            *  and see if we could make go-ipfs include Retry-After header in payload description for this type of error */
             const pins = lsWithBackoff({ service: service.name, cid: cidsToCheck.map(cid => new CID(cid)), status: ['queued', 'pinning', 'pinned', 'failed'] })
             for await (const pin of pins) {
+              console.log(pin)
               const pinCid = pin.cid.toString()
               notPins.delete(pinCid)
 
@@ -295,6 +290,7 @@ const pinningBundle = {
 
     const adds = []
     const pending = []
+    const failed = []
     const removals = []
 
     store.selectPinningServices().forEach(async service => {
@@ -315,11 +311,12 @@ const pinningBundle = {
         // log error and continue with other services
         console.error(`ipfs.pin.remote error for ${cid}@${service.name}`, e)
         const msgArgs = { serviceName: service.name, errorMsg: e.toString() }
+        failed.push(id)
         dispatch({ type: 'IPFS_PIN_FAILED', msgArgs })
       }
     })
 
-    dispatch({ type: 'UPDATE_REMOTE_PINS', payload: { adds, removals, pending } })
+    dispatch({ type: 'UPDATE_REMOTE_PINS', payload: { adds, removals, pending, failed } })
 
     await store.doPinsFetch()
   },
