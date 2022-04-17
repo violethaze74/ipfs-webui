@@ -16,6 +16,9 @@ const CID_PIN_CHECK_BATCH_SIZE = 10 // Pinata returns error when >10
 const cacheId2Cid = (id) => id.split(':').at(-1)
 const cacheId2ServiceName = (id) => id.split(':').at(0)
 
+const uniq = (arr) => [...new Set(arr)]
+const notIn = (...arrays) => p => arrays.every(array => !array.some(a => a === p))
+
 const parseService = async (service, remoteServiceTemplates, ipfs) => {
   const template = remoteServiceTemplates.find(t => service.endpoint.toString() === t.apiEndpoint.toString())
   const icon = template?.icon
@@ -57,11 +60,35 @@ const uniqueCidBatches = (arrayOfCids, size) => {
   return result
 }
 
+const remotePinLs = (ipfs, params) => {
+  const backoffs = readSetting('remotesServicesBackoffs') || {}
+  const { service } = params
+
+  const { lastTry, tryAfter } = backoffs[service] || { lastTry: 0, tryAfter: 30000 } // Start with 30s
+  if (lastTry + tryAfter > new Date().getTime()) {
+    throw new Error('still within back-off period')
+  }
+
+  try {
+    return ipfs.pin.remote.ls(params)
+  } catch (e) {
+    if (e.toString().includes('429 Too Many Requests')) {
+      backoffs[service] = {
+        lastTry: new Date().getTime(),
+        tryAfter: tryAfter * 3
+      }
+      writeSetting('remotesServicesBackoffs', backoffs)
+    }
+
+    throw e
+  }
+}
+
 const pinningBundle = {
   name: 'pinning',
   persistActions: ['UPDATE_REMOTE_PINS'],
   init: store => {
-    // Starts periodic remote pins checker.
+    // Starts periodic remote pins checker. remotePinLs takes care of the back-off period.
     setInterval(() => {
       const pins = [
         ...store.selectPendingPins(),
@@ -82,8 +109,6 @@ const pinningBundle = {
   }, action) => {
     if (action.type === 'UPDATE_REMOTE_PINS') {
       const { adds = [], removals = [], pending = [], failed = [] } = action.payload
-      const uniq = (arr) => [...new Set(arr)]
-      const notIn = (...arrays) => p => arrays.every(array => !array.some(a => a === p))
       const remotePins = uniq([...state.remotePins, ...adds].filter(notIn(removals, pending, failed)))
       const notRemotePins = uniq([...state.notRemotePins, ...removals].filter(notIn(adds, pending, failed)))
       const pendingPins = uniq([...state.pendingPins, ...pending].filter(notIn(adds, removals, failed)))
@@ -133,30 +158,6 @@ const pinningBundle = {
     const failed = []
     const pending = []
 
-    const lsWithBackoff = (params) => {
-      const backoffs = readSetting('remotesServicesBackoffs') || {}
-      const { service } = params
-
-      const { lastTry, tryAfter } = backoffs[service] || { lastTry: 0, tryAfter: 30000 } // Start with 30s
-      if (lastTry + tryAfter > new Date().getTime()) {
-        throw new Error('still within backoff period')
-      }
-
-      try {
-        return ipfs.pin.remote.ls(params)
-      } catch (e) {
-        if (e.toString().includes('429 Too Many Requests')) {
-          backoffs[service] = {
-            lastTry: new Date().getTime(),
-            tryAfter: tryAfter * 3
-          }
-          writeSetting('remotesServicesBackoffs', backoffs)
-        }
-
-        throw e
-      }
-    }
-
     await Promise.allSettled(pinningServices.map(async service => {
       try {
         // skip CIDs that we know the state of at this service
@@ -170,7 +171,7 @@ const pinningBundle = {
           if (!cidsToCheck.length) continue // skip if no new cids to check
           const notPins = new Set(cidsToCheck.map(cid => cid.toString()))
           try {
-            const pins = lsWithBackoff({ service: service.name, cid: cidsToCheck.map(cid => new CID(cid)), status: ['queued', 'pinning', 'pinned', 'failed'] })
+            const pins = remotePinLs(ipfs, { service: service.name, cid: cidsToCheck.map(cid => new CID(cid)), status: ['queued', 'pinning', 'pinned', 'failed'] })
             for await (const pin of pins) {
               const pinCid = pin.cid.toString()
               notPins.delete(pinCid)
