@@ -84,18 +84,39 @@ const remotePinLs = (ipfs, params) => {
   }
 }
 
+const resumePendingPins = (store) => {
+  const interval = setInterval(() => {
+    const isReady = store.selectIpfsReady()
+    if (isReady) {
+      clearTimeout(interval)
+      const pendingPins = store.selectPendingPins()
+
+      pendingPins.forEach(pin => {
+        const [service, cid] = pin.split(':')
+        console.log(service, cid)
+
+        store.doSetPinning({ cid: new CID(cid) }, [service], false)
+      })
+    }
+  }, 1000)
+}
+
+const intervalFetchPins = (store) => {
+  setInterval(() => {
+    const pins = [
+      ...store.selectPendingPins(),
+      ...store.selectFailedPins()
+    ].map(serviceCid => ({ cid: serviceCid.split(':')[1] }))
+    store.doFetchRemotePins(pins, true)
+  }, 30000)
+}
+
 const pinningBundle = {
   name: 'pinning',
   persistActions: ['UPDATE_REMOTE_PINS'],
   init: store => {
-    // Starts periodic remote pins checker. remotePinLs takes care of the back-off period.
-    setInterval(() => {
-      const pins = [
-        ...store.selectPendingPins(),
-        ...store.selectFailedPins()
-      ].map(serviceCid => ({ cid: serviceCid.split(':')[1] }))
-      store.doFetchRemotePins(pins, true)
-    }, 30000)
+    resumePendingPins(store)
+    intervalFetchPins(store)
   },
   reducer: (state = {
     pinningServices: [],
