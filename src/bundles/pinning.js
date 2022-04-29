@@ -307,12 +307,12 @@ const pinningBundle = {
     }
   }), {}),
 
-  doDismissCompletedPin: (pin) => async ({ dispatch }) => {
-    dispatch({ type: 'DISMISS_REMOTE_PINS', payload: { completed: [pin] } })
+  doDismissCompletedPin: (...pins) => async ({ dispatch }) => {
+    dispatch({ type: 'DISMISS_REMOTE_PINS', payload: { completed: pins } })
   },
 
-  doDismissFailedPin: (pin) => async ({ dispatch }) => {
-    dispatch({ type: 'DISMISS_REMOTE_PINS', payload: { failed: [pin] } })
+  doDismissFailedPin: (...pins) => async ({ dispatch }) => {
+    dispatch({ type: 'DISMISS_REMOTE_PINS', payload: { failed: pins } })
   },
 
   doSetPinning: (file, services = [], wasLocallyPinned, previousRemotePins = []) => async ({ getIpfs, store, dispatch }) => {

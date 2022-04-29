@@ -8,7 +8,7 @@ import { join } from 'path'
 import { sorts } from '../../bundles/files'
 import { normalizeFiles } from '../../lib/files'
 import { List, WindowScroller, AutoSizer } from 'react-virtualized'
-// Reac DnD
+// React DnD
 import { NativeTypes } from 'react-dnd-html5-backend'
 import { useDrop } from 'react-dnd'
 // Components
@@ -22,33 +22,42 @@ const addFiles = async (filesPromise, onAddFiles) => {
   onAddFiles(normalizeFiles(files))
 }
 
-const mergeRemotePinsIntoFiles = (files, remotePins, pendingPins, failedPins) => {
+const mergeRemotePinsIntoFiles = (files, remotePins, pendingPins, failedPins, onDismissFailedPin) => {
   const remotePinsCids = remotePins.map(id => id.split(':').at(-1))
   const pendingPinsCids = pendingPins.map(id => id.split(':').at(-1))
   const failedPinsCids = failedPins.map(id => id.split(':').at(-1))
 
   return files.map(f => {
+    const fileFailedPins = failedPinsCids.reduce((acc, cid, i) => {
+      if (cid === f.cid?.toString()) {
+        acc.push(failedPins[i])
+      }
+
+      return acc
+    }, [])
+
     const isRemotePin = remotePinsCids.includes(f.cid?.toString())
     const isPendingPin = pendingPinsCids.includes(f.cid?.toString())
-    const isFailedPin = failedPinsCids.includes(f.cid?.toString())
+    const isFailedPin = fileFailedPins.length > 0
 
     return {
       ...f,
       isRemotePin,
       isPendingPin,
-      isFailedPin
+      isFailedPin,
+      onDismissFailedPin: () => onDismissFailedPin(...fileFailedPins)
     }
   })
 }
 
 export const FilesList = ({
   className, files, pins, pinningServices, remotePins, pendingPins, failedPins, filesSorting, updateSorting, downloadProgress, filesIsFetching, filesPathInfo, showLoadingAnimation,
-  onShare, onSetPinning, onInspect, onDownload, onRemove, onRename, onNavigate, onRemotePinClick, onAddFiles, onMove, doFetchRemotePins, handleContextMenuClick, t
+  onShare, onSetPinning, onInspect, onDownload, onRemove, onRename, onNavigate, onRemotePinClick, onAddFiles, onMove, doFetchRemotePins, doDismissFailedPin, handleContextMenuClick, t
 }) => {
   const [selected, setSelected] = useState([])
   const [focused, setFocused] = useState(null)
   const [firstVisibleRow, setFirstVisibleRow] = useState(null)
-  const [allFiles, setAllFiles] = useState(mergeRemotePinsIntoFiles(files, remotePins, pendingPins, failedPins))
+  const [allFiles, setAllFiles] = useState(mergeRemotePinsIntoFiles(files, remotePins, pendingPins, failedPins, doDismissFailedPin))
   const listRef = useRef()
   const filesRefs = useRef([])
   const refreshPinCache = true // manually clicking on Pin Status column skips cache and updates remote status
@@ -394,5 +403,6 @@ export default connect(
   'selectFilesSorting',
   'selectFilesPathInfo',
   'selectShowLoadingAnimation',
+  'doDismissFailedPin',
   withTranslation('files')(FilesList)
 )

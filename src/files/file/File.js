@@ -19,7 +19,7 @@ import './PendingAnimation.css'
 
 const File = ({
   name, type, size, cid, path, pinned, t, selected, focused, translucent, coloured, cantSelect, cantDrag, isMfs, isRemotePin, isPendingPin, isFailedPin,
-  onAddFiles, onMove, onSelect, onNavigate, onSetPinning, handleContextMenuClick
+  onAddFiles, onMove, onSelect, onNavigate, onSetPinning, onDismissFailedPin, handleContextMenuClick
 }) => {
   const dotsWrapper = useRef()
 
@@ -138,10 +138,11 @@ const File = ({
             { isPendingPin && <div className='br-100 PendingAnimation' title={t('pinningRemotely')} style={{ width: '2rem', height: '2rem' }}>
               <GlyphPinCloud className='fill-aqua' />
             </div> }
-            { isFailedPin && <div className='br-100 o-70' title={t('pinningFailed')} style={{ width: '2rem', height: '2rem' }}>
-              {/* TODO: click to clear */}
-              <GlyphPinCloud className='fill-red' />
-            </div> }
+            { isFailedPin && <div className='br-100 o-70' title={t('pinningFailedClickToDismiss')} style={{ width: '2rem', height: '2rem' }}>
+              <button onClick={onDismissFailedPin} className='w2 h2 pa0'>
+                <GlyphPinCloud className='fill-red' />
+              </button>
+            </div>}
             { !pinned && !isRemotePin && !isPendingPin && !isFailedPin && <div className='br-100 hide-child' title={t('app:actions.setPinning')} style={{ width: '2rem', height: '2rem' }}>
               <GlyphPin className='fill-gray-muted child' />
             </div> }
@@ -170,6 +171,7 @@ File.propTypes = {
   onNavigate: PropTypes.func.isRequired,
   onAddFiles: PropTypes.func.isRequired,
   onMove: PropTypes.func.isRequired,
+  onDismissFailedPin: PropTypes.func.isRequired,
   coloured: PropTypes.bool,
   translucent: PropTypes.bool,
   handleContextMenuClick: PropTypes.func,
