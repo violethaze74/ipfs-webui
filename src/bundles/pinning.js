@@ -113,7 +113,7 @@ const intervalFetchPins = (store) => {
 
 const pinningBundle = {
   name: 'pinning',
-  persistActions: ['UPDATE_REMOTE_PINS'],
+  persistActions: ['UPDATE_REMOTE_PINS', 'DISMISS_REMOTE_PINS'],
   init: store => {
     resumePendingPins(store)
     intervalFetchPins(store)
@@ -123,6 +123,7 @@ const pinningBundle = {
     remotePins: [],
     pendingPins: [],
     failedPins: [],
+    completedPins: [],
     notRemotePins: [],
     localPinsSize: 0,
     localNumberOfPins: 0,
@@ -130,12 +131,24 @@ const pinningBundle = {
   }, action) => {
     if (action.type === 'UPDATE_REMOTE_PINS') {
       const { adds = [], removals = [], pending = [], failed = [] } = action.payload
+
+      console.log(action.payload, state.completedPins)
+
       const remotePins = uniq([...state.remotePins, ...adds].filter(notIn(removals, pending, failed)))
       const notRemotePins = uniq([...state.notRemotePins, ...removals].filter(notIn(adds, pending, failed)))
       const pendingPins = uniq([...state.pendingPins, ...pending].filter(notIn(adds, removals, failed)))
       const failedPins = uniq([...state.failedPins, ...failed].filter(notIn(adds, removals, pending)))
+      const completedPins = uniq([...state.completedPins, ...adds].filter(p => state.pendingPins.some(a => a === p)))
 
-      return { ...state, remotePins, notRemotePins, pendingPins, failedPins }
+      return { ...state, remotePins, notRemotePins, pendingPins, failedPins, completedPins }
+    }
+    if (action.type === 'DISMISS_REMOTE_PINS') {
+      const { failed = [], completed = [] } = action.payload
+
+      const failedPins = state.failedPins.filter(notIn(failed))
+      const completedPins = state.completedPins.filter(notIn(completed))
+
+      return { ...state, failedPins, completedPins }
     }
     if (action.type === 'SET_LOCAL_PINS_STATS') {
       const { localPinsSize, localNumberOfPins } = action.payload
@@ -227,6 +240,7 @@ const pinningBundle = {
   selectNotRemotePins: (state) => state.pinning.notRemotePins || [],
   selectPendingPins: (state) => state.pinning.pendingPins || [],
   selectFailedPins: (state) => state.pinning.failedPins || [],
+  selectCompletedPins: (state) => state.pinning.completedPins || [],
 
   selectLocalPinsSize: (state) => state.pinning.localPinsSize,
   selectLocalNumberOfPins: (state) => state.pinning.localNumberOfPins,
@@ -292,6 +306,14 @@ const pinningBundle = {
       nickname: curr.name
     }
   }), {}),
+
+  doDismissCompletedPin: (pin) => async ({ dispatch }) => {
+    dispatch({ type: 'DISMISS_REMOTE_PINS', payload: { completed: [pin] } })
+  },
+
+  doDismissFailedPin: (pin) => async ({ dispatch }) => {
+    dispatch({ type: 'DISMISS_REMOTE_PINS', payload: { failed: [pin] } })
+  },
 
   doSetPinning: (file, services = [], wasLocallyPinned, previousRemotePins = []) => async ({ getIpfs, store, dispatch }) => {
     const ipfs = getIpfs()
